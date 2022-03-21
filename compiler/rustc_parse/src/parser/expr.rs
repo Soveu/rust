@@ -294,6 +294,12 @@ impl<'a> Parser<'a> {
                 this.parse_assoc_expr_with(prec + prec_adjustment, LhsExpr::NotYetParsed)
             })?;
 
+            if op.is_assign_like() &&
+                matches!(rhs.kind, ExprKind::Assign(..) | ExprKind::AssignOp(..))
+            {
+                todo!("rhs={:#?}", rhs);
+            }
+
             let span = self.mk_expr_sp(&lhs, lhs_span, rhs.span);
             lhs = match op {
                 AssocOp::Add
