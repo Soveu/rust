@@ -584,3 +584,16 @@ fn as_slice() {
     assert_eq!(A, &[44]);
     assert_eq!(B, &[]);
 }
+
+#[test]
+fn init_inplace() {
+    let mut x: Option<[i8; 20]> = None;
+
+    unsafe {
+        Option::init_inplace(&mut x, |p| {
+            core::ptr::write_bytes(p, 42i32, 20usize);
+        });
+    }
+
+    assert_eq!(x, Some([42i32; 20]));
+}

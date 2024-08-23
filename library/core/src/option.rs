@@ -1847,6 +1847,55 @@ impl<T> Option<T> {
             _ => None,
         }
     }
+
+    /// SAFETY: `seif` must be valid for writing, `f` must initialize properly T
+    #[unstable(feature = "clone_to_uninit", issue = "126799")]
+    pub unsafe fn init_inplace(seif: *mut Self, f: impl FnOnce(*mut T)) {
+        let has_niche = core::mem::size_of::<T>() == core::mem::size_of::<Self>();
+
+        let uninit = if has_niche {
+            // After initializing T, the Option will "automatically" become Some.
+            seif as *mut T
+        } else {
+            // We have to very manually set the discriminant and return a pointer to the inner T.
+            // SAFETY: well, not much of it, besides what is said above
+            unsafe { in_the_name_of_corro_i_order_you_rustc_to_set_this_option_to_some(seif) }
+        };
+
+        f(uninit);
+    }
+}
+
+impl<T: core::clone::CloneToUninit> Option<T> {
+    /// FIXME
+    #[unstable(feature = "clone_to_uninit", issue = "126799")]
+    pub unsafe fn clone_to_uninit(&self, dst: *mut Self) {
+        match self {
+            // Writing None is surprisingly efficient on opt-level > 0.
+            // SAFETY: same as this function
+            None => unsafe {
+                core::ptr::write(dst, None);
+            },
+            // SAFETY: same as this function
+            Some(inner) => unsafe {
+                Self::init_inplace(dst, |p| inner.clone_to_uninit(p));
+            },
+        }
+    }
+}
+
+// SAFETY: uhhh
+#[allow(redundant_semicolons)]
+#[custom_mir(dialect = "runtime", phase = "initial")]
+unsafe fn in_the_name_of_corro_i_order_you_rustc_to_set_this_option_to_some<T>(
+    o: *mut Option<T>,
+) -> *mut T {
+    use core::intrinsics::mir::*;
+    mir! {{
+        SetDiscriminant(*o, 1);
+        RET = core::ptr::addr_of_mut!(place!(Field(Variant(*o, 1), 0)));
+        Return()
+    }}
 }
 
 impl<T, U> Option<(T, U)> {

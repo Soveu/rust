@@ -207,6 +207,7 @@
 #![feature(const_mut_refs)]
 #![feature(const_precise_live_drops)]
 #![feature(const_refs_to_cell)]
+#![feature(custom_mir)]
 #![feature(decl_macro)]
 #![feature(deprecated_suggestion)]
 #![feature(doc_cfg)]
